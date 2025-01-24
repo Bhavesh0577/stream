@@ -115,9 +115,15 @@ if {'Open', 'High', 'Low', 'Close', 'Volume'}.issubset(df.columns):
         """
         Predict market trend based on SMA and RSI indicators.
         """
-        if data[['SMA_50', 'SMA_200', 'RSI']].isnull().any().any():
-            return "Neutral"  # Not enough data to predict
+        # Check if sufficient data is available for SMA calculations
+        if len(data) < 200:  # Not enough rows for SMA_200
+            return "Neutral"
 
+        # Check for NaN values in the required columns
+        if data[['SMA_50', 'SMA_200', 'RSI']].isnull().any().any():
+            return "Neutral"  # Incomplete data
+
+        # Trend logic
         if data['SMA_50'].iloc[-1] > data['SMA_200'].iloc[-1] and data['RSI'].iloc[-1] > 50:
             return "Uptrend"
         elif data['SMA_50'].iloc[-1] < data['SMA_200'].iloc[-1] and data['RSI'].iloc[-1] < 50:
@@ -125,10 +131,22 @@ if {'Open', 'High', 'Low', 'Close', 'Volume'}.issubset(df.columns):
         else:
             return "Neutral"
 
+
+    # Ensure required columns are generated
+    df['SMA_50'] = df['Close'].rolling(window=50).mean()
+    df['SMA_200'] = df['Close'].rolling(window=200).mean()
+    rsi = RSIIndicator(close=df['Close'], window=14)
+    df['RSI'] = rsi.rsi()
+
+    # Debugging: Check if columns contain NaN values
+    st.write("Columns with NaN values:", df[['SMA_50', 'SMA_200', 'RSI']].isnull().sum())
+
+    # Predict Trend
     predicted_trend = predict_trend(df)
     trend_colors = {"Uptrend": "🟢", "Downtrend": "🔴", "Neutral": "🟡"}
     st.subheader("📈 Predicted Trend")
     st.markdown(f"**{trend_colors[predicted_trend]} Predicted Trend: {predicted_trend}**")
+
 
 
     # Sentiment Analysis
